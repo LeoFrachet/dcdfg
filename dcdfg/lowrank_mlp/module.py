@@ -168,25 +168,25 @@ class MLPModularGaussianModule(nn.Module):
 
     def spectral_radius_iteration(self, node2module, module2node, n_iter=5):
         """
-        Compute the spectral norm of w_adj with a power iteration.
-        :param np.ndarray w_adj: the weighted adjacency matrix (each entry in [0,1])
+        Compute the spectral radius of w_adj = node2module @ module2node.T - diag
+        with a power iteration in O(num_vars * num_modules), without materializing w_adj.
+        self.v tracks the right eigenvector, self.u the left eigenvector.
         """
+        diag = torch.sum(node2module * module2node, 1)
         with torch.no_grad():
             for _ in range(n_iter):
-                # w_adj = node2module @ module2node.T - diag
-                # v update: v+ \propsto w_adj v
-                diag_term = self.v * torch.sum(node2module * module2node, 1)
+                # v+ \propto w_adj v
                 self.v = F.normalize(
-                    node2module @ module2node.T @ self.v - diag_term, dim=0
+                    node2module @ (module2node.T @ self.v) - self.v * diag, dim=0
                 )
-                # u update: y+ \propsto w_adj.T u
-                diag_term = self.u * torch.sum(node2module * module2node, 1)
+                # u+ \propto w_adj.T u
                 self.u = F.normalize(
-                    module2node @ node2module.T @ self.u - diag_term, dim=0
+                    module2node @ (node2module.T @ self.u) - self.u * diag, dim=0
                 )
-        numerator = self.v.T @ node2module @ module2node.T @ self.u
-        numerator -= self.v @ (self.u * torch.sum(node2module * module2node, 1))
-        return numerator / (self.v @ self.u)
+        # Rayleigh quotient u^T w_adj v / u^T v: its gradient is u v^T / (u^T v)
+        numerator = (node2module.T @ self.u) @ (module2node.T @ self.v)
+        numerator = numerator - self.u @ (self.v * diag)
+        return numerator / (self.u @ self.v)
 
     def compute_dag_constraint(self, adj):
         """
