@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..utils.dag_optim import bisect, is_acyclic
+from ..utils.dag_optim import bisect, is_acyclic, trace_expm_minus_dim
 
 
 class LinearGaussianModule(nn.Module):
@@ -105,7 +105,7 @@ class LinearGaussianModule(nn.Module):
         )
 
     def compute_dag_constraint_exp(self, w_adj):
-        return torch.trace(torch.matrix_exp(w_adj / self.base_radius)) - w_adj.shape[0]
+        return trace_expm_minus_dim(w_adj / self.base_radius)
 
     def forward(self, x):
         """

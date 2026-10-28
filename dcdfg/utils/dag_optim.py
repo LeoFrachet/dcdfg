@@ -66,6 +66,16 @@ def is_acyclic(adjacency):
     return _is_acyclic(adjacency.astype(float))
 
 
+def trace_expm_minus_dim(mat):
+    """
+    Compute tr(exp(mat)) - dim in float64.
+    In float32, the O(1) diagonal of exp(mat) absorbs contributions below ~dim * 1e-7,
+    so the constraint of a cyclic graph can round to exactly 0.
+    """
+    h = torch.trace(torch.matrix_exp(mat.double())) - mat.shape[0]
+    return h.to(mat.dtype)
+
+
 class GumbelAdjacency(torch.nn.Module):
     """
     Probabilistic mask used for DAG learning.
