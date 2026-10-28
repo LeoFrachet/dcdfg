@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..utils.dag_optim import GumbelAdjacency, is_acyclic
+from ..utils.dag_optim import GumbelAdjacency, is_acyclic, trace_expm_minus_dim
 
 
 class MLPGaussianModule(nn.Module):
@@ -149,7 +149,7 @@ class MLPGaussianModule(nn.Module):
         )
 
     def compute_dag_constraint_exp(self, w_adj):
-        return torch.trace(torch.matrix_exp(w_adj)) - w_adj.shape[0]
+        return trace_expm_minus_dim(w_adj)
 
     def forward(self, x):
         """

@@ -18,7 +18,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..utils.dag_optim import GumbelInNOut, bisect, is_acyclic
+from ..utils.dag_optim import (
+    GumbelInNOut,
+    bisect,
+    is_acyclic,
+    trace_expm_minus_dim,
+)
 
 
 class MLPModularGaussianModule(nn.Module):
@@ -194,17 +199,12 @@ class MLPModularGaussianModule(nn.Module):
         :param np.ndarray w_adj: the weighted adjacency matrix (each entry in [0,1])
         """
         if self.constraint_mode == "exp":
-            return torch.trace(torch.matrix_exp(adj / self.base_radius)) - self.num_vars
+            return trace_expm_minus_dim(adj / self.base_radius)
         elif self.constraint_mode == "spectral_radius":
             return self.spectral_radius_adj(adj)
         elif self.constraint_mode == "exptrick":
-            return (
-                torch.trace(
-                    torch.matrix_exp(
-                        self.gumbel_innout.get_proba_modules() / self.base_radius
-                    )
-                )
-                - self.num_modules
+            return trace_expm_minus_dim(
+                self.gumbel_innout.get_proba_modules() / self.base_radius
             )
         elif self.constraint_mode == "spectraltrick":
             return self.compute_dag_constraint_spectral(
